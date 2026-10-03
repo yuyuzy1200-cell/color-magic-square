@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>色の魔方陣（固定色）</title>
+<style>
+:root{--bg:#fafaf7;--fg:#222;--mut:#777;--card:#fff;--bd:#ccc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1c1a;--fg:#eee;--mut:#999;--card:#272725;--bd:#555}}
+:root[data-theme="dark"]{--bg:#1c1c1a;--fg:#eee;--mut:#999;--card:#272725;--bd:#555}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:480px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 6px}
+p{font-size:13px;color:var(--mut);margin:0 0 10px;line-height:1.6}
+h2{font-size:15px;margin:16px 0 6px}
+.colors{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.cedit{display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:4px 6px}
+.cedit input[type=color]{width:26px;height:26px;border:none;padding:0;background:none}
+.cedit .cname{font-size:13px;user-select:none}
+.cedit button{border:none;background:none;color:var(--mut);cursor:pointer;font-size:14px}
+.ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+button,select{border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:8px;height:34px;padding:0 10px;font-size:14px}
+#grid{display:grid;gap:4px;aspect-ratio:1;width:100%}
+.cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border:2px dashed var(--bd);box-sizing:border-box;cursor:pointer;font-weight:700;font-size:13px;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.6)}
+.cell.f{border:2px solid transparent}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pal{width:34px;height:34px;border:3px solid transparent;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.6)}
+.pal.sel{border-color:var(--fg);transform:scale(1.15)}
+.dot{width:20px;height:20px;box-sizing:border-box;border:3px dashed var(--bd)}
+.dot.ok{border:3px solid #2ca02c}.dot.ng{border:3px solid #e5484d}
+.lab{font-size:12px;color:var(--mut);width:100%;margin-top:6px}
+#msg{font-size:15px;font-weight:700;margin-top:12px;min-height:22px;transition:transform .2s}
+#msg.pop{animation:popmsg .5s ease}
+@keyframes popmsg{0%{transform:scale(0.4);opacity:0}50%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+#confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:999}
+.confetti-piece{position:absolute;top:-20px;width:9px;height:9px;opacity:0.95;animation:confetti-fall linear forwards}
+@keyframes confetti-fall{to{transform:translateY(110vh) rotate(540deg);opacity:0}}
+@keyframes flash{0%{background:rgba(255,255,255,0)}15%{background:rgba(255,255,255,.55)}100%{background:rgba(255,255,255,0)}}
+#flash{position:fixed;inset:0;pointer-events:none;z-index:998}
+#flash.go{animation:flash .5s ease}
+</style>
+</head>
+<body>
+<main>
+<h1>🎨 色の魔方陣（固定色）</h1>
+<p>使う色を決めて、盤面に置きます。縦・横・対角線に同じ色が重ならないように並べてみよう。</p>
+<h2>使う色（4〜8色）</h2>
+<div class="colors" id="colors"></div>
+<div class="ctl"><button id="addc">＋色を追加</button><label><input type="checkbox" id="num"> 数字を表示</label>
+ <label>ヒント <select id="hint"><option value="0">なし</option><option value="0.2" selected>少なめ</option><option value="0.35">ふつう</option><option value="0.5">多め</option></select></label>
+ <label>形 <select id="shape"><option value="50%">○</option><option value="10%">□</option></select></label>
+</div>
+<div id="grid"></div>
+<h2>色をえらぶ</h2>
+<div class="row" id="pal"></div>
+<div class="ctl" style="margin-top:12px"><button id="reset">リセット</button><button id="ans">答えを見る</button></div>
+<div id="msg"></div>
+<h2>各ラインの重複チェック</h2>
+<div id="lines"></div>
+</main>
+<div id="flash"></div>
+<div id="confetti"></div>
+<script>
+const $=id=>document.getElementById(id);
+let colors=[['#87ceeb','水色'],['#e63946','赤色'],['#ffd23f','黄色'],['#2ca02c','緑色']];
+let cells=[],sel=-1;
+function renderColors(){
+ const c=$('colors');c.innerHTML='';
+ colors.forEach((col,i)=>{
+  const d=document.createElement('div');d.className='cedit';
+  d.innerHTML=`<input type="color" value="${col[0]}"><span class="cname">${col[1]}</span>`+(colors.length>4?'<button>×</button>':'');
+  const ci=d.querySelector('input');
+  ci.oninput=()=>{colors[i][0]=ci.value;reset()};
+  const btn=d.querySelector('button');if(btn)btn.onclick=()=>{colors.splice(i,1);renderColors();reset()};
+  c.appendChild(d);
+ });
+}
+const extraDefaults=[['#ff8c42','橙色'],['#9b59b6','紫色'],['#ff69b4','桃色'],['#795548','茶色']];
+$('addc').onclick=()=>{if(colors.length<8){const d=extraDefaults[colors.length-4]||['#888888','色'+(colors.length+1)];colors.push([d[0],d[1]]);renderColors();reset()}};
+let celebrated=false;
+function reset(){
+ celebrated=false;
+ const n=colors.length;cells=Array(n*n).fill(-1);sel=-1;
+ const pct=+$('hint').value;
+ if(pct>0){
+  const sol=solve(n);
+  if(sol){
+   const ans=sol.flat(),idx=[...Array(n*n).keys()];
+   for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]]}
+   const cnt=Math.round(n*n*pct);
+   idx.slice(0,cnt).forEach(i=>cells[i]=ans[i]);
+  }
+ }
+ renderAll();
+}
+const PRESOLVED={
+ 4:[[1,3,2,0],[0,2,3,1],[3,1,0,2],[2,0,1,3]],
+ 5:[[2,3,0,4,1],[1,0,2,3,4],[3,1,4,0,2],[4,2,3,1,0],[0,4,1,2,3]],
+ 6:[[5,2,0,3,1,4],[4,3,5,1,2,0],[2,1,4,0,3,5],[0,4,1,2,5,3],[1,5,3,4,0,2],[3,0,2,5,4,1]],
+ 7:[[0,2,5,4,1,6,3],[4,1,0,3,6,5,2],[6,5,3,1,4,2,0],[5,6,4,2,3,0,1],[2,3,6,0,5,1,4],[3,0,1,6,2,4,5],[1,4,2,5,0,3,6]],
+ 8:[[7,6,5,1,3,4,2,0],[5,1,6,2,0,7,3,4],[4,7,0,3,1,6,5,2],[6,3,1,4,2,0,7,5],[0,2,3,7,5,1,4,6],[3,0,4,5,6,2,1,7],[2,5,7,0,4,3,6,1],[1,4,2,6,7,5,0,3]]
+};
+function solve(n){
+ const base=PRESOLVED[n];
+ if(!base)return null;
+ return base.map(r=>r.slice());
+}
+function renderAll(){
+ const n=colors.length;
+ const g=$('grid');g.style.gridTemplateColumns=`repeat(${n},1fr)`;g.innerHTML='';
+ const show=$('num').checked,rad=$('shape').value;
+ cells.forEach((v,i)=>{const d=document.createElement('div');d.className='cell'+(v>=0?' f':'');d.style.borderRadius=rad;
+  if(v>=0){d.style.background=colors[v][0];if(show)d.textContent=v+1}
+  d.onclick=()=>{if(sel>=0){cells[i]=sel}else if(v>=0){cells[i]=-1}renderAll()};g.appendChild(d)});
+ const p=$('pal');p.innerHTML='';
+ colors.forEach((col,i)=>{const d=document.createElement('div');d.className='pal'+(sel==i?' sel':'');d.style.borderRadius=rad;
+  d.style.background=col[0];d.title=col[1];if(show)d.textContent=i+1;d.onclick=()=>{sel=sel==i?-1:i;renderAll()};p.appendChild(d)});
+ const at=(i,j)=>cells[i*n+j];
+ const lines=[];
+ lines.push(['横',[...Array(n)].map((_,i)=>[...Array(n)].map((_,j)=>at(i,j)))]);
+ lines.push(['縦',[...Array(n)].map((_,j)=>[...Array(n)].map((_,i)=>at(i,j)))]);
+ lines.push(['対角線',[[...Array(n)].map((_,i)=>at(i,i)),[...Array(n)].map((_,i)=>at(i,n-1-i))]]);
+ let all=true,anyEmpty=false;
+ $('lines').innerHTML=lines.map(([t,ls])=>`<div class="lab">${t}</div><div class="row">${ls.map(l=>{
+  if(l.includes(-1)){anyEmpty=true;all=false;return `<span class="dot" style="border-radius:${rad}"></span>`}
+  const ok=new Set(l).size===l.length;if(!ok)all=false;
+  return `<span class="dot ${ok?'ok':'ng'}" style="border-radius:${rad};background:${ok?'transparent':'#e5484d'}"></span>`}).join('')}</div>`).join('');
+ const emoji=n===5?'🎊':n===6?'🎆':n===7?'🏆️':n===8?'㊗️':'🎉';
+ const msgEl=$('msg');
+ msgEl.textContent=anyEmpty?'':(all?emoji+' 完成！どのラインも色が重なっていないよ':'赤い印のラインを見直してみよう');
+ if(all&&!anyEmpty&&!celebrated){
+  celebrated=true;
+  msgEl.classList.remove('pop');void msgEl.offsetWidth;msgEl.classList.add('pop');
+  celebrate(n);
+ }
+}
+function celebrate(n){
+ const f=$('flash');f.classList.remove('go');void f.offsetWidth;f.classList.add('go');
+ const box=$('confetti'),palette=colors.map(c=>c[0]),count=60;
+ for(let k=0;k<count;k++){
+  const p=document.createElement('div');p.className='confetti-piece';
+  p.style.left=Math.random()*100+'vw';
+  p.style.background=palette[k%palette.length];
+  p.style.borderRadius=Math.random()<0.5?'50%':'2px';
+  const dur=(1.4+Math.random()*1.2).toFixed(2);
+  p.style.animationDuration=dur+'s';
+  p.style.animationDelay=(Math.random()*0.3)+'s';
+  box.appendChild(p);
+  setTimeout(()=>p.remove(),(parseFloat(dur)+0.5)*1000);
+ }
+}
+$('num').onchange=renderAll;
+$('shape').onchange=renderAll;
+$('hint').onchange=reset;
+$('reset').onclick=reset;
+$('ans').onclick=()=>{
+ const n=colors.length,sol=solve(n);
+ if(!sol){$('msg').textContent='この色の数（'+n+'色）では、条件を満たす並べ方がありません。色を1つ増減してみてください。';return}
+ cells=sol.flat();sel=-1;renderAll();
+};
+renderColors();reset();
+</script>
+</body>
+</html>
