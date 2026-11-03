@@ -24,6 +24,10 @@ button,select{border:1px solid var(--bd);background:var(--card);color:var(--fg);
 #grid{display:grid;gap:4px;aspect-ratio:1;width:100%}
 .cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border:2px dashed var(--bd);box-sizing:border-box;cursor:pointer;font-weight:700;font-size:13px;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.6)}
 .cell.f{border:2px solid transparent}
+.memo{display:grid;gap:2px;width:76%;align-content:center;justify-items:center;pointer-events:none}
+.memo span{display:block;width:100%;aspect-ratio:1;box-shadow:0 0 0 1px rgba(0,0,0,.18)}
+#memo.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+#memohint{font-size:12px;color:var(--mut);margin:-4px 0 8px;line-height:1.6;display:none}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pal{width:34px;height:34px;border:3px solid transparent;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.6)}
 .pal.sel{border-color:var(--fg);transform:scale(1.15)}
@@ -54,7 +58,8 @@ button,select{border:1px solid var(--bd);background:var(--card);color:var(--fg);
 <div id="grid"></div>
 <h2>色をえらぶ</h2>
 <div class="row" id="pal"></div>
-<div class="ctl" style="margin-top:12px"><button id="reset">リセット</button><button id="ans">答えを見る</button></div>
+<div class="ctl" style="margin-top:12px"><button id="memo">✏️ メモ: オフ</button><button id="reset">リセット</button><button id="ans">答えを見る</button></div>
+<div id="memohint">メモモード：色を選んでから空きマスをタップすると、仮の色を何個でも置けます（もう一度タップで外せます）。色を選ばずに空きマスをタップすると、そのマスのメモをすべて消します。</div>
 <div id="msg"></div>
 <h2>各ラインの重複チェック</h2>
 <div id="lines"></div>
@@ -78,10 +83,11 @@ function renderColors(){
 }
 const extraDefaults=[['#ff8c42','橙色'],['#9b59b6','紫色'],['#ff69b4','桃色'],['#795548','茶色']];
 $('addc').onclick=()=>{if(colors.length<8){const d=extraDefaults[colors.length-4]||['#888888','色'+(colors.length+1)];colors.push([d[0],d[1]]);renderColors();reset()}};
-let celebrated=false;
+let celebrated=false,memoMode=false,memos=[];
 function reset(){
  celebrated=false;
  const n=colors.length;cells=Array(n*n).fill(-1);sel=-1;
+ memos=Array.from({length:n*n},()=>[]);
  const pct=+$('hint').value;
  if(pct>0){
   const sol=solve(n);
@@ -112,7 +118,25 @@ function renderAll(){
  const show=$('num').checked,rad=$('shape').value;
  cells.forEach((v,i)=>{const d=document.createElement('div');d.className='cell'+(v>=0?' f':'');d.style.borderRadius=rad;
   if(v>=0){d.style.background=colors[v][0];if(show)d.textContent=v+1}
-  d.onclick=()=>{if(sel>=0){cells[i]=sel}else if(v>=0){cells[i]=-1}renderAll()};g.appendChild(d)});
+  else if(memos[i]&&memos[i].length){
+   const m=document.createElement('div');m.className='memo';
+   const maxC=Math.ceil(Math.sqrt(n)),useC=Math.min(memos[i].length,maxC);
+   m.style.gridTemplateColumns=`repeat(${useC},1fr)`;m.style.width=(76*useC/maxC)+'%';
+   memos[i].slice().sort((a,b)=>a-b).forEach(c=>{const s=document.createElement('span');s.style.background=colors[c][0];s.style.borderRadius=rad;m.appendChild(s)});
+   d.appendChild(m);
+  }
+  d.onclick=()=>{
+   if(memoMode){
+    if(v>=0){if(sel<0)cells[i]=-1}
+    else if(sel>=0){const k=memos[i].indexOf(sel);if(k>=0)memos[i].splice(k,1);else memos[i].push(sel)}
+    else memos[i]=[];
+   }else{
+    if(sel>=0){cells[i]=sel;memos[i]=[]}else if(v>=0){cells[i]=-1}
+   }
+   renderAll()};
+  g.appendChild(d)});
+ $('memo').textContent='✏️ メモ: '+(memoMode?'オン':'オフ');$('memo').classList.toggle('on',memoMode);
+ $('memohint').style.display=memoMode?'block':'none';
  const p=$('pal');p.innerHTML='';
  colors.forEach((col,i)=>{const d=document.createElement('div');d.className='pal'+(sel==i?' sel':'');d.style.borderRadius=rad;
   d.style.background=col[0];d.title=col[1];if(show)d.textContent=i+1;d.onclick=()=>{sel=sel==i?-1:i;renderAll()};p.appendChild(d)});
@@ -153,6 +177,7 @@ function celebrate(n){
 $('num').onchange=renderAll;
 $('shape').onchange=renderAll;
 $('hint').onchange=reset;
+$('memo').onclick=()=>{memoMode=!memoMode;renderAll()};
 $('reset').onclick=reset;
 $('ans').onclick=()=>{
  const n=colors.length,sol=solve(n);
