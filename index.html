@@ -27,7 +27,7 @@ button,select{border:1px solid var(--bd);background:var(--card);color:var(--fg);
 .cell:not(.f){background:var(--cellbg)}
 .memo{display:grid;gap:2px;width:76%;align-content:center;justify-items:center;pointer-events:none}
 .memo span{display:block;width:100%;aspect-ratio:1;box-shadow:0 0 0 1px rgba(0,0,0,.18)}
-#memo.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+#memo.on,#bigbtn.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 #memohint{font-size:12px;color:var(--mut);margin:-4px 0 8px;line-height:1.6;display:none}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pal{width:34px;height:34px;border:3px solid transparent;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.6)}
@@ -44,11 +44,30 @@ button,select{border:1px solid var(--bd);background:var(--card);color:var(--fg);
 @keyframes flash{0%{background:rgba(255,255,255,0)}15%{background:rgba(255,255,255,.55)}100%{background:rgba(255,255,255,0)}}
 #flash{position:fixed;inset:0;pointer-events:none;z-index:998}
 #flash.go{animation:flash .5s ease}
+#bigbtn{margin:0 0 10px}
+body.big h1{font-size:28px}
+body.big p{font-size:19px;line-height:1.7}
+body.big h2{font-size:23px;margin:22px 0 8px}
+body.big .cedit{gap:8px;padding:8px 10px}
+body.big .cedit input[type=color]{width:38px;height:38px}
+body.big .cedit .cname{font-size:20px}
+body.big .cedit button{font-size:22px;padding:0 6px}
+body.big button,body.big select{height:56px;font-size:20px;padding:0 16px}
+body.big .ctl{gap:14px;font-size:20px}
+body.big .ctl input[type=checkbox]{width:26px;height:26px}
+body.big .pal{width:56px;height:56px}
+body.big .row{gap:10px}
+body.big .dot{width:30px;height:30px}
+body.big .lab{font-size:17px}
+body.big #msg{font-size:22px;min-height:30px}
+body.big #memohint{font-size:17px}
+body.big .cell{font-size:22px;border-width:3px}
 </style>
 </head>
 <body>
 <main>
 <h1>🎨 色の魔方陣（固定色）</h1>
+<button id="bigbtn">🔠 大きい文字: オフ</button>
 <p>使う色を決めて、盤面に置きます。縦・横・対角線に同じ色が重ならないように並べてみよう。</p>
 <h2>使う色（4〜8色）</h2>
 <div class="colors" id="colors"></div>
@@ -151,7 +170,7 @@ function renderAll(){
   if(l.includes(-1)){anyEmpty=true;all=false;return `<span class="dot" style="border-radius:${rad}"></span>`}
   const ok=new Set(l).size===l.length;if(!ok)all=false;
   return `<span class="dot ${ok?'ok':'ng'}" style="border-radius:${rad};background:${ok?'transparent':'#e5484d'}"></span>`}).join('')}</div>`).join('');
- const emoji=n===5?'🎊':n===6?'🎆':n===7?'🌈':n===8?'🚀':'🎉';
+ const emoji=n===5?'🎊':n===6?'🎆':n===7?'🌈':n===8?'㊗️':'🎉';
  const msgEl=$('msg');
  msgEl.textContent=anyEmpty?'':(all?emoji+' 完成！どのラインも色が重なっていないよ':'赤い印のラインを見直してみよう');
  if(all&&!anyEmpty&&!celebrated){
@@ -192,6 +211,15 @@ function setPattern(){
  document.body.style.backgroundImage='url("data:image/svg+xml,'+encodeURIComponent(svg)+'")';
 }
 setPattern();
+function setBig(on){
+ document.body.classList.toggle('big',on);
+ $('bigbtn').textContent='🔠 大きい文字: '+(on?'オン':'オフ');
+ $('bigbtn').classList.toggle('on',on);
+ try{localStorage.setItem('big',on?'1':'0')}catch(e){}
+}
+$('bigbtn').onclick=()=>setBig(!document.body.classList.contains('big'));
+let savedBig=false;try{savedBig=localStorage.getItem('big')==='1'}catch(e){}
+setBig(savedBig);
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',setPattern);
 renderColors();reset();
 </script>
