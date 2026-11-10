@@ -173,7 +173,7 @@ function renderAll(){
   if(l.includes(-1)){anyEmpty=true;all=false;return `<span class="dot" style="border-radius:${rad}"></span>`}
   const ok=new Set(l).size===l.length;if(!ok)all=false;
   return `<span class="dot ${ok?'ok':'ng'}" style="border-radius:${rad};background:${ok?'transparent':'#e5484d'}"></span>`}).join('')}</div>`).join('');
- const emoji=n===5?'🎊':n===6?'🎆':n===7?'🌈':n===8?'㊗️':'🎉';
+ const emoji=n===5?'🎊':n===6?'🎆':n===7?'🌈':n===8?'🚀':'🎉';
  const msgEl=$('msg');
  msgEl.textContent=anyEmpty?'':(all?emoji+' 完成！どのラインも色が重なっていないよ':'赤い印のラインを見直してみよう');
  if(all&&!anyEmpty&&!celebrated){
