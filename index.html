@@ -31,6 +31,8 @@ button,select{border:1px solid var(--bd);background:var(--card);color:var(--fg);
 #memohint{font-size:12px;color:var(--mut);margin:-4px 0 8px;line-height:1.6;display:none}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pal{width:34px;height:34px;border:3px solid transparent;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.6)}
+.cell.dup{outline:4px solid #e5484d;outline-offset:-4px;animation:dupp 1s ease-in-out infinite}
+@keyframes dupp{50%{outline-color:rgba(229,72,77,.35)}}
 .pal.sel{border-color:var(--fg);transform:scale(1.15)}
 .cell.f,.pal{position:relative;overflow:hidden;box-shadow:inset 0 -7px 10px rgba(0,0,0,.25),inset 0 3px 5px rgba(255,255,255,.4),0 2px 4px rgba(0,0,0,.28)}
 .cell.f::before,.pal::before{content:'';position:absolute;left:14%;top:7%;width:72%;height:42%;border-radius:50% 50% 55% 55%/70% 70% 40% 40%;background:linear-gradient(to bottom,rgba(255,255,255,.62),rgba(255,255,255,.08));pointer-events:none}
@@ -81,7 +83,7 @@ body.big .cell{font-size:22px;border-width:3px}
 <div id="grid"></div>
 <h2>色をえらぶ</h2>
 <div class="row" id="pal"></div>
-<div class="ctl" style="margin-top:12px"><button id="memo">✏️ メモ: オフ</button><button id="reset">リセット</button><button id="ans">答えを見る</button></div>
+<div class="ctl" style="margin-top:12px"><button id="undo">↩️ もどす</button><button id="err">👀 ミス表示: オフ</button><button id="memo">✏️ メモ: オフ</button><button id="reset">リセット</button><button id="ans">答えを見る</button></div>
 <div id="memohint">メモモード：色を選んでから空きマスをタップすると、仮の色を何個でも置けます（もう一度タップで外せます）。色を選ばずに空きマスをタップすると、そのマスのメモをすべて消します。</div>
 <div id="msg"></div>
 <h2>各ラインの重複チェック</h2>
@@ -114,9 +116,15 @@ function renderColors(){
 }
 const extraDefaults=[['#ff8c42','橙色'],['#9b59b6','紫色'],['#ff69b4','桃色'],['#795548','茶色']];
 $('addc').onclick=()=>{if(colors.length<8){const d=extraDefaults[colors.length-4]||['#888888','色'+(colors.length+1)];colors.push([d[0],d[1]]);renderColors();reset()}};
-let celebrated=false,memoMode=false,memos=[];
+let celebrated=false,memoMode=false,memos=[],hist=[],showErr=false;
+function snap(){hist.push({c:cells.slice(),m:memos.map(a=>a.slice())});if(hist.length>200)hist.shift()}
+function dupSet(n){const d=new Set();const chk=idx=>{const seen={};idx.forEach(i=>{const v=cells[i];if(v<0)return;(seen[v]=seen[v]||[]).push(i)});Object.values(seen).forEach(a=>{if(a.length>1)a.forEach(i=>d.add(i))})};
+ for(let i=0;i<n;i++){chk([...Array(n)].map((_,j)=>i*n+j));chk([...Array(n)].map((_,j)=>j*n+i))}
+ chk([...Array(n)].map((_,i)=>i*n+i));chk([...Array(n)].map((_,i)=>i*n+n-1-i));return d}
+$('undo').onclick=()=>{const h=hist.pop();if(!h)return;cells=h.c;memos=h.m;celebrated=false;renderAll()};
+$('err').onclick=()=>{showErr=!showErr;renderAll()};
 function reset(){
- celebrated=false;
+ celebrated=false;hist=[];
  const n=colors.length;cells=Array(n*n).fill(-1);sel=-1;
  memos=Array.from({length:n*n},()=>[]);
  const pct=+$('hint').value;
@@ -147,7 +155,8 @@ function renderAll(){
  const n=colors.length;
  const g=$('grid');g.style.gridTemplateColumns=`repeat(${n},1fr)`;g.innerHTML='';
  const show=$('num').checked,rad=$('shape').value;
- cells.forEach((v,i)=>{const d=document.createElement('div');d.className='cell'+(v>=0?' f':'');d.style.borderRadius=rad;
+ const dups=showErr?dupSet(n):new Set();
+ cells.forEach((v,i)=>{const d=document.createElement('div');d.className='cell'+(v>=0?' f':'')+(dups.has(i)?' dup':'');d.style.borderRadius=rad;
   if(v>=0){d.style.background=colors[v][0];if(show)d.textContent=v+1}
   else if(memos[i]&&memos[i].length){
    const m=document.createElement('div');m.className='memo';
@@ -157,6 +166,7 @@ function renderAll(){
    d.appendChild(m);
   }
   d.onclick=()=>{
+   snap();
    if(memoMode){
     if(v>=0){if(sel<0)cells[i]=-1}
     else if(sel>=0){const k=memos[i].indexOf(sel);if(k>=0)memos[i].splice(k,1);else memos[i].push(sel)}
@@ -166,6 +176,7 @@ function renderAll(){
    }
    renderAll()};
   g.appendChild(d)});
+ $('err').textContent='👀 ミス表示: '+(showErr?'オン':'オフ');$('err').classList.toggle('on',showErr);$('undo').disabled=!hist.length;$('undo').style.opacity=hist.length?1:.4;
  $('memo').textContent='✏️ メモ: '+(memoMode?'オン':'オフ');$('memo').classList.toggle('on',memoMode);
  $('memohint').style.display=memoMode?'block':'none';
  const p=$('pal');p.innerHTML='';
@@ -213,7 +224,7 @@ $('reset').onclick=reset;
 $('ans').onclick=()=>{
  const n=colors.length,sol=solve(n);
  if(!sol){$('msg').textContent='この色の数（'+n+'色）では、条件を満たす並べ方がありません。色を1つ増減してみてください。';return}
- cells=sol.flat();sel=-1;renderAll();
+ snap();cells=sol.flat();sel=-1;renderAll();
 };
 function setPattern(){
  const dk=matchMedia('(prefers-color-scheme:dark)').matches;
