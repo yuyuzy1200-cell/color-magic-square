@@ -87,7 +87,7 @@ body.big .cell{font-size:22px;border-width:3px}
 <div id="grid"></div>
 <h2>色をえらぶ</h2>
 <div class="row" id="pal"></div>
-<div class="ctl" style="margin-top:12px"><button id="sol">🌸 生命の花: オン</button><button id="undo">↩️ もどす</button><button id="err">👀 ミス表示: オフ</button><button id="memo">✏️ メモ: オフ</button><button id="reset">リセット</button><button id="ans">答えを見る</button></div>
+<div class="ctl" style="margin-top:12px"><button id="undo">↩️ もどす</button><button id="err">👀 ミス表示: オフ</button><button id="memo">✏️ メモ: オフ</button><button id="reset">リセット</button><button id="ans">答えを見る</button></div>
 <div id="memohint">メモモード：色を選んでから空きマスをタップすると、仮の色を何個でも置けます（もう一度タップで外せます）。色を選ばずに空きマスをタップすると、そのマスのメモをすべて消します。</div>
 <div id="msg"></div>
 <h2>各ラインの重複チェック</h2>
@@ -120,11 +120,10 @@ function renderColors(){
 }
 const extraDefaults=[['#ff8c42','橙色'],['#9b59b6','紫色'],['#ff69b4','桃色'],['#795548','茶色']];
 $('addc').onclick=()=>{if(colors.length<8){const d=extraDefaults[colors.length-4]||['#888888','色'+(colors.length+1)];colors.push([d[0],d[1]]);renderColors();reset()}};
-let showSol=true;try{showSol=localStorage.getItem('sol')!=='0'}catch(e){}
+const showSol=true;
 function solSvg(emp){const r=21,c=50,pts=[[c,c]];for(let k=0;k<6;k++){const a=k*Math.PI/3;pts.push([c+r*Math.sin(a),c-r*Math.cos(a)])}
  const e=document.createElementNS('http://www.w3.org/2000/svg','svg');e.setAttribute('viewBox','0 0 100 100');e.setAttribute('class','sol'+(emp?' emp':''));
  e.innerHTML=pts.map(q=>`<circle cx="${q[0].toFixed(2)}" cy="${q[1].toFixed(2)}" r="${r}" fill="none" stroke="#000" stroke-opacity=".85" stroke-width="2.2"/>`).join('');return e}
-$('sol').onclick=()=>{showSol=!showSol;try{localStorage.setItem('sol',showSol?'1':'0')}catch(e){}renderAll()};
 let celebrated=false,memoMode=false,memos=[],hist=[],showErr=false;
 function snap(){hist.push({c:cells.slice(),m:memos.map(a=>a.slice())});if(hist.length>200)hist.shift()}
 function dupSet(n){const d=new Set();const chk=idx=>{const seen={};idx.forEach(i=>{const v=cells[i];if(v<0)return;(seen[v]=seen[v]||[]).push(i)});Object.values(seen).forEach(a=>{if(a.length>1)a.forEach(i=>d.add(i))})};
@@ -186,7 +185,6 @@ function renderAll(){
    }
    renderAll()};
   g.appendChild(d)});
- $('sol').textContent='🌸 生命の花: '+(showSol?'オン':'オフ');
  $('err').textContent='👀 ミス表示: '+(showErr?'オン':'オフ');$('err').classList.toggle('on',showErr);$('undo').disabled=!hist.length;$('undo').style.opacity=hist.length?1:.4;
  $('memo').textContent='✏️ メモ: '+(memoMode?'オン':'オフ');$('memo').classList.toggle('on',memoMode);
  $('memohint').style.display=memoMode?'block':'none';
