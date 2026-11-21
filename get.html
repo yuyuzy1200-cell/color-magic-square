@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>色の魔方陣 - 色で解くパズル</title>
+<meta name="description" content="同じ色が縦・横・ななめに重ならないように並べる、色のパズル。ビー玉のようなきれいな色で、大きい文字にも対応。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="色の魔方陣 - 色で解くパズル">
+<meta property="og:description" content="同じ色が縦・横・ななめに重ならないように並べる、色のパズル。ビー玉のようなきれいな色で、大きい文字にも対応。">
+<meta property="og:image" content="https://yuyuzy1200-cell.github.io/color-magic-square/og-image.png">
+<meta property="og:url" content="https://yuyuzy1200-cell.github.io/color-magic-square/get.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://yuyuzy1200-cell.github.io/color-magic-square/og-image.png">
+<style>
+body{margin:0;font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#fdf8ec;color:#3a2f1a;text-align:center;padding:28px 16px}
+img{width:100%;max-width:480px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+h1{font-size:26px;margin:18px 0 6px}p{font-size:16px;line-height:1.7;margin:4px 0 18px}
+a.b{display:block;max-width:360px;margin:12px auto;padding:16px;border-radius:12px;font-size:19px;font-weight:700;text-decoration:none;color:#fff}
+.ios{background:#111}.and{background:#2ca02c}.web{background:#fff;color:#3a2f1a;border:2px solid #cbb98a}
+</style>
+</head>
+<body>
+<img src="og-image.png" alt="色の魔方陣">
+<h1>色の魔方陣</h1>
+<p>同じ色が重ならないように並べる、色のパズル。<br>無料で遊べます。</p>
+<a class="b ios" href="https://apps.apple.com/app/id6832588924">iPhone・iPad（App Store）</a>
+<a class="b and" href="https://play.google.com/store/apps/details?id=com.colormagicsquare.app">Android（Google Play）</a>
+<a class="b web" href="index.html">ブラウザで遊ぶ</a>
+<script>
+(function(){
+ var ua=navigator.userAgent||'';
+ var ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+ var and=/Android/.test(ua);
+ if(ios)location.replace('https://apps.apple.com/app/id6832588924');
+ else if(and)location.replace('https://play.google.com/store/apps/details?id=com.colormagicsquare.app');
+})();
+</script>
+</body>
+</html>
