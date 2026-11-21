@@ -143,7 +143,7 @@ function solSvg(emp){const r=21,c=50,pts=[[c,c]];for(let k=0;k<6;k++){const a=k*
  e.innerHTML=pts.map(q=>`<circle cx="${q[0].toFixed(2)}" cy="${q[1].toFixed(2)}" r="${r}" fill="none" stroke="#000" stroke-opacity=".85" stroke-width="2.2"/>`).join('');return e}
 let tStart=0,tEl=0,tRun=false,tTimer=null,cheated=false,showT=true,lastTime=0,newBest=false;
 try{showT=localStorage.getItem('showT')!=='0'}catch(e){}
-const SHARE_URL='https://yuyuzy1200-cell.github.io/color-magic-square/';
+const SHARE_URL='https://yuyuzy1200-cell.github.io/color-magic-square/?v=2';
 const fmt=ms=>{const t=Math.floor(ms/1000);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 const bkey=()=>'best_'+colors.length+'_'+$('hint').value;
 function getBest(){try{const v=+localStorage.getItem(bkey());return v>0?v:0}catch(e){return 0}}
@@ -248,7 +248,7 @@ function renderAll(){
   if(l.includes(-1)){anyEmpty=true;all=false;return `<span class="dot" style="border-radius:${rad}"></span>`}
   const ok=new Set(l).size===l.length;if(!ok)all=false;
   return `<span class="dot ${ok?'ok':'ng'}" style="border-radius:${rad};background:${ok?'transparent':'#e5484d'}"></span>`}).join('')}</div>`).join('');
- const emoji=n===5?'🎊':n===6?'🎆':n===7?'🌈':n===8?'🚀':'🎉';
+ const emoji=n===5?'🎊':n===6?'🎆':n===7?'🌈':n===8?'㊗️':'🎉';
  const msgEl=$('msg');
  $('sharebox').style.display=(all&&!anyEmpty&&!cheated)?'block':'none';if(!(all&&!anyEmpty))$('sharenote').textContent='';
  msgEl.textContent=anyEmpty?'':(all?emoji+' 完成！どのラインも色が重なっていないよ':'赤い印のラインを見直してみよう');
