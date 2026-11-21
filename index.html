@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -45,6 +44,13 @@ button,select{border:1px solid var(--bd);background:var(--card);color:var(--fg);
 .dot{width:20px;height:20px;box-sizing:border-box;border:3px dashed var(--bd)}
 .dot.ok{border:3px solid #2ca02c}.dot.ng{border:3px solid #e5484d}
 .lab{font-size:12px;color:var(--mut);width:100%;margin-top:6px}
+#tinfo{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:15px;font-weight:700;margin:0 0 8px;min-height:30px}
+#tinfo .best{color:var(--mut);font-weight:600}
+#tinfo button{height:28px;font-size:12px;padding:0 8px;margin-left:auto}
+#sharebox{display:none;margin-top:10px}
+#sharebox button{height:44px;font-size:16px;font-weight:700;padding:0 18px}
+#sharenote{font-size:13px;color:var(--mut);margin-top:6px;min-height:18px}
+body.big #tinfo{font-size:22px}body.big #sharebox button{height:56px;font-size:20px}body.big #sharenote{font-size:16px}
 #msg{font-size:15px;font-weight:700;margin-top:12px;min-height:22px;transition:transform .2s}
 #msg.pop{animation:popmsg .5s ease}
 @keyframes popmsg{0%{transform:scale(0.4);opacity:0}50%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
@@ -85,12 +91,14 @@ body.big .cell{font-size:22px;border-width:3px}
  <label>ヒント <select id="hint"><option value="0">なし</option><option value="0.2" selected>少なめ</option><option value="0.35">ふつう</option><option value="0.5">多め</option></select></label>
  <label>形 <select id="shape"><option value="50%">○</option><option value="10%">□</option></select></label>
 </div>
+<div id="tinfo"><span id="tnow">⏱ 0:00</span><span class="best" id="tbest"></span><button id="ttog">⏱ 表示: オン</button></div>
 <div id="grid"></div>
 <h2>色をえらぶ</h2>
 <div class="row" id="pal"></div>
 <div class="ctl" style="margin-top:12px"><button id="undo">↩️ もどす</button><button id="err">👀 ミス表示: オフ</button><button id="memo">✏️ メモ: オフ</button><button id="reset">リセット</button><button id="ans">答えを見る</button></div>
 <div id="memohint">メモモード：色を選んでから空きマスをタップすると、仮の色を何個でも置けます（もう一度タップで外せます）。色を選ばずに空きマスをタップすると、そのマスのメモをすべて消します。</div>
 <div id="msg"></div>
+<div id="sharebox"><button id="share">📤 結果をシェア</button><div id="sharenote"></div></div>
 <h2>各ラインの重複チェック</h2>
 <div id="lines"></div>
 </main>
@@ -125,15 +133,45 @@ const showSol=true;
 function solSvg(emp){const r=21,c=50,pts=[[c,c]];for(let k=0;k<6;k++){const a=k*Math.PI/3;pts.push([c+r*Math.sin(a),c-r*Math.cos(a)])}
  const e=document.createElementNS('http://www.w3.org/2000/svg','svg');e.setAttribute('viewBox','0 0 100 100');e.setAttribute('class','sol'+(emp?' emp':''));
  e.innerHTML=pts.map(q=>`<circle cx="${q[0].toFixed(2)}" cy="${q[1].toFixed(2)}" r="${r}" fill="none" stroke="#000" stroke-opacity=".85" stroke-width="2.2"/>`).join('');return e}
+let tStart=0,tEl=0,tRun=false,tTimer=null,cheated=false,showT=true,lastTime=0,newBest=false;
+try{showT=localStorage.getItem('showT')!=='0'}catch(e){}
+const SHARE_URL='https://yuyuzy1200-cell.github.io/color-magic-square/';
+const fmt=ms=>{const t=Math.floor(ms/1000);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
+const bkey=()=>'best_'+colors.length+'_'+$('hint').value;
+function getBest(){try{const v=+localStorage.getItem(bkey());return v>0?v:0}catch(e){return 0}}
+function tShow(){$('tnow').textContent='⏱ '+fmt(tRun?Date.now()-tStart:tEl);const b=getBest();$('tbest').textContent='🏆 ベスト '+(b?fmt(b):'--:--');
+ $('tnow').style.display=$('tbest').style.display=showT?'':'none';$('ttog').textContent='⏱ 表示: '+(showT?'オン':'オフ')}
+function tStartRun(){if(tRun||cheated)return;tStart=Date.now()-tEl;tRun=true;clearInterval(tTimer);tTimer=setInterval(tShow,500);tShow()}
+function tStop(){if(!tRun)return;tEl=Date.now()-tStart;tRun=false;clearInterval(tTimer);tShow()}
+function tReset(){tRun=false;clearInterval(tTimer);tEl=0;cheated=false;newBest=false;lastTime=0;tShow()}
+$('ttog').onclick=()=>{showT=!showT;try{localStorage.setItem('showT',showT?'1':'0')}catch(e){}tShow()};
+const EMO=['🔴','🟠','🟡','🟢','🔵','🟣','🟤','⚫','⚪'];
+function emojiFor(h){const r=parseInt(h.slice(1,3),16)/255,g=parseInt(h.slice(3,5),16)/255,b=parseInt(h.slice(5,7),16)/255;
+ const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn;
+ if(d<0.12)return l<0.3?'⚫':l>0.75?'⚪':'⚫';
+ let hh=mx==r?((g-b)/d%6):mx==g?(b-r)/d+2:(r-g)/d+4;hh=(hh*60+360)%360;
+ if(hh<15||hh>=345)return '🔴';if(hh<40)return l<0.4?'🟤':'🟠';if(hh<70)return '🟡';if(hh<170)return '🟢';if(hh<260)return '🔵';return '🟣'}
+function shareText(){const n=colors.length,used=new Set(),map=colors.map(c=>{let e=emojiFor(c[0]);if(used.has(e))e=EMO.find(x=>!used.has(x))||e;used.add(e);return e});
+ let g='';for(let i=0;i<n;i++)g+=cells.slice(i*n,i*n+n).map(v=>map[v]).join('')+'\n';
+ const b=getBest();
+ return '色の魔方陣 '+n+'×'+n+' を完成！\n⏱ '+fmt(lastTime)+(newBest?'（ベスト更新🏆）':(b?'（ベスト '+fmt(b)+'）':''))+'\n\n'+g+'\n'+SHARE_URL+'\n#色の魔方陣'}
+async function doShare(){
+ const text=shareText(),note=$('sharenote');
+ try{if(navigator.share){await navigator.share({text});note.textContent='';return}}catch(e){if(e&&e.name==='AbortError')return}
+ let ok=false;
+ try{await navigator.clipboard.writeText(text);ok=true}catch(e){}
+ if(!ok){try{const t=document.createElement('textarea');t.value=text;t.style.position='fixed';t.style.opacity=0;document.body.appendChild(t);t.select();ok=document.execCommand('copy');t.remove()}catch(e){}}
+ note.textContent=ok?'✅ コピーしました。X・LINE・メールなどに貼り付けてね':'コピーできませんでした。下の文を長押ししてコピーしてね：\n'+text}
+$('share').onclick=doShare;
 let celebrated=false,memoMode=false,memos=[],hist=[],showErr=false;
 function snap(){hist.push({c:cells.slice(),m:memos.map(a=>a.slice())});if(hist.length>200)hist.shift()}
 function dupSet(n){const d=new Set();const chk=idx=>{const seen={};idx.forEach(i=>{const v=cells[i];if(v<0)return;(seen[v]=seen[v]||[]).push(i)});Object.values(seen).forEach(a=>{if(a.length>1)a.forEach(i=>d.add(i))})};
  for(let i=0;i<n;i++){chk([...Array(n)].map((_,j)=>i*n+j));chk([...Array(n)].map((_,j)=>j*n+i))}
  chk([...Array(n)].map((_,i)=>i*n+i));chk([...Array(n)].map((_,i)=>i*n+n-1-i));return d}
-$('undo').onclick=()=>{const h=hist.pop();if(!h)return;cells=h.c;memos=h.m;celebrated=false;renderAll()};
+$('undo').onclick=()=>{const h=hist.pop();if(!h)return;cells=h.c;memos=h.m;celebrated=false;if(!tRun&&!cheated&&tEl>0)tStartRun();renderAll()};
 $('err').onclick=()=>{showErr=!showErr;renderAll()};
 function reset(){
- celebrated=false;hist=[];
+ celebrated=false;hist=[];tReset();
  const n=colors.length;cells=Array(n*n).fill(-1);sel=-1;
  memos=Array.from({length:n*n},()=>[]);
  const pct=+$('hint').value;
@@ -176,7 +214,7 @@ function renderAll(){
    d.appendChild(m);
   }else if(showSol)d.appendChild(solSvg(true));
   d.onclick=()=>{
-   snap();
+   snap();tStartRun();
    if(memoMode){
     if(v>=0){if(sel<0)cells[i]=-1}
     else if(sel>=0){const k=memos[i].indexOf(sel);if(k>=0)memos[i].splice(k,1);else memos[i].push(sel)}
@@ -204,9 +242,12 @@ function renderAll(){
   return `<span class="dot ${ok?'ok':'ng'}" style="border-radius:${rad};background:${ok?'transparent':'#e5484d'}"></span>`}).join('')}</div>`).join('');
  const emoji=n===5?'🎊':n===6?'🎆':n===7?'🌈':n===8?'🚀':'🎉';
  const msgEl=$('msg');
+ $('sharebox').style.display=(all&&!anyEmpty&&!cheated)?'block':'none';if(!(all&&!anyEmpty))$('sharenote').textContent='';
  msgEl.textContent=anyEmpty?'':(all?emoji+' 完成！どのラインも色が重なっていないよ':'赤い印のラインを見直してみよう');
  if(all&&!anyEmpty&&!celebrated){
   celebrated=true;
+  if(!cheated){tStop();lastTime=tEl;const b=getBest();newBest=!b||lastTime<b;if(newBest){try{localStorage.setItem(bkey(),String(lastTime))}catch(e){}}tShow();
+   if(newBest)msgEl.textContent=emoji+' 完成！ベスト更新 '+fmt(lastTime)+' 🏆'}
   msgEl.classList.remove('pop');void msgEl.offsetWidth;msgEl.classList.add('pop');
   celebrate(n);
  }
@@ -234,7 +275,7 @@ $('reset').onclick=reset;
 $('ans').onclick=()=>{
  const n=colors.length,sol=solve(n);
  if(!sol){$('msg').textContent='この色の数（'+n+'色）では、条件を満たす並べ方がありません。色を1つ増減してみてください。';return}
- snap();cells=sol.flat();sel=-1;renderAll();
+ snap();tStop();cheated=true;cells=sol.flat();sel=-1;renderAll();
 };
 function setPattern(){
  const dk=matchMedia('(prefers-color-scheme:dark)').matches;
